@@ -229,9 +229,6 @@ if (length(which(initial_data$pvalue>1))>0) {
 
     # Remove the original pvalues
     initial_data$pvalue<-NULL
-}
-    
-   
 } else {
 
     ## Calculate the -log10 p-value for the input data 
