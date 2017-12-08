@@ -252,7 +252,7 @@ if (length(which(initial_data$pvalue>1))>0) {
 }
 
 # Calculate -log10 of significance threshold
-log_pvalue_sign<-log10(pvalue_sign)
+log_pvalue_sign<--log10(pvalue_sign)
 
 ###================================================================================================================================================###
 ### 3. Preparing data for plotting, calculating variables related to plotting                                                                      ###
