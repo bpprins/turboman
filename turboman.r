@@ -392,10 +392,19 @@ for (bin_number in 1:unique_x_bins){
       gene_coordinates_chromosome<-gene_coordinates[which(gene_coordinates$chromosome==chromosome_number),]
       
       ## Find the smallest distances to the position of our top SNP
-      smallest_distance_to_gene_for_top_snp_in_bin<-min(abs(gene_coordinates_chromosome$gene_transcription_midposition-largest_pvalue_index_in_bin_position),na.rm=TRUE)
+      #OLD CODE : smallest_distance_to_gene_for_top_snp_in_bin<-min(abs(gene_coordinates_chromosome$gene_transcription_midposition-largest_pvalue_index_in_bin_position),na.rm=TRUE)
+      smallest_distance_to_gene_start_for_top_snp_in_bin<-min(abs(gene_coordinates_chromosome$gene_transcription_start-largest_pvalue_index_in_bin_position),na.rm=TRUE)
+      smallest_distance_to_gene_stop_for_top_snp_in_bin<-min(abs(gene_coordinates_chromosome$gene_transcription_stop-largest_pvalue_index_in_bin_position),na.rm=TRUE)
+ 
       
       ## Find which gene corresponds to the smallest distances to the position of our top SNP
-      genename_for_top_snp_in_bin<-as.character(gene_coordinates_chromosome[which(abs(gene_coordinates_chromosome$gene_transcription_midposition-largest_pvalue_index_in_bin_position)==smallest_distance_to_gene_for_top_snp_in_bin),c("gene_name")])[1]
+      # OLD CODE : genename_for_top_snp_in_bin<-as.character(gene_coordinates_chromosome[which(abs(gene_coordinates_chromosome$gene_transcription_midposition-largest_pvalue_index_in_bin_position)==smallest_distance_to_gene_for_top_snp_in_bin),c("gene_name")])[1]
+      
+      if (smallest_distance_to_gene_start_for_top_snp_in_bin<smallest_distance_to_gene_stop_for_top_snp_in_bin) {
+            genename_for_top_snp_in_bin<-as.character(gene_coordinates_chromosome[which(abs(gene_coordinates_chromosome$gene_transcription_start-largest_pvalue_index_in_bin_position)==smallest_distance_to_gene_start_for_top_snp_in_bin),c("gene_name")])[1]
+      } else {
+            genename_for_top_snp_in_bin<-as.character(gene_coordinates_chromosome[which(abs(gene_coordinates_chromosome$gene_transcription_stop-largest_pvalue_index_in_bin_position)==smallest_distance_to_gene_stop_for_top_snp_in_bin),c("gene_name")])[1]
+      }
       
       ## Enter the chromosome of the top SNP in the gene annotation dataframe which we will use in the plot
       gene_plot_data[top_snp_counter,1]<-chromosome_number
@@ -519,7 +528,10 @@ png(paste0(output_data_rootname,".png"),width=3600, height=2400, pointsize = 12,
 
 ## Sorting the plotting data from the GWAS datafile and the gene annotation file
 plot_data<-plot_data[order(plot_data$chromosome,plot_data$position),]
-gene_plot_data<-gene_plot_data[order(gene_plot_data$chromosome,gene_plot_data$position),]
+
+if (dim(gene_plot_data)[1] > 0 ) {
+    gene_plot_data<-gene_plot_data[order(gene_plot_data$chromosome,gene_plot_data$position),]
+}
 
 ## Putting the data in vectors, easier to work with
 chromosomes <- plot_data$chromosome
@@ -577,11 +589,13 @@ y_coordinates = log_pvalues
 
 
 ## Calculate the final x-coordinates of the top SNPs with annotated genes to plot
-gene_x_coordinates = trunc(gene_plot_data$position/100) + x2[gene_plot_data$chromosome]
-## Set the final y-coordinates of the top SNPs with annotated genes to plot
-gene_y_coordinates = gene_plot_data$log_pvalue
-## Set the nearest gene names of the top SNPs to plot
-nearest_gene_names_hits = gene_plot_data$nearest_gene_name
+if (dim(gene_plot_data)[1] > 0 ) {
+    gene_x_coordinates = trunc(gene_plot_data$position/100) + x2[gene_plot_data$chromosome]
+    ## Set the final y-coordinates of the top SNPs with annotated genes to plot
+    gene_y_coordinates = gene_plot_data$log_pvalue
+    ## Set the nearest gene names of the top SNPs to plot
+    nearest_gene_names_hits = gene_plot_data$nearest_gene_name
+}
 
 ## Set the default colors of the all association datapoints, grey and light grey, alternating between odd and even chromosome numbers
 col1="gray72"
@@ -591,62 +605,66 @@ chromosome_colour <- ifelse (chromosomes%%2==0, col1, col2)
 ## Plot the association data
 plot(x_coordinates,y_coordinates,pch=20,col=chromosome_colour,axes=F,ylab="",xlab="",bty="n",ylim=c(0,y_axis_true_limit),cex=0.8,main=plot_title)
 
-## Create X-axis breaks at which the gene names will be plotted, chosing random number of 150 as I simply
-## Assume maximally 150 peaks will be annotated and at 150 genes I hope no gene names will be displayed overlapping
-x_axis_break_factor<-x_axis_limit/150
+## Plot the gene annotation data
+if (dim(gene_plot_data)[1] > 0 ) {
 
-## Draw top SNP gene annotation lines
-y_axis_stop_gene_annotation_vertical_lines<-y_axis_plot_data_limit
-y_axis_stop_gene_annotation_diagonal_lines<-y_axis_plot_data_limit*1.1
-y_axis_true_limit<-y_axis_plot_data_limit*1.3
+    ## Create X-axis breaks at which the gene names will be plotted, chosing random number of 150 as I simply
+    ## Assume maximally 150 peaks will be annotated and at 150 genes I hope no gene names will be displayed overlapping
+    x_axis_break_factor<-x_axis_limit/150
 
-for (i in 1:length(gene_x_coordinates))
-{
+    ## Draw top SNP gene annotation lines
+    y_axis_stop_gene_annotation_vertical_lines<-y_axis_plot_data_limit
+    y_axis_stop_gene_annotation_diagonal_lines<-y_axis_plot_data_limit*1.1
+    y_axis_true_limit<-y_axis_plot_data_limit*1.3
 
-## Define the coordinates for the vertical annotation lines
-vertical_annotation_line_x_coordinate_start<-gene_x_coordinates[i]
-vertical_annotation_line_x_coordinate_stop<-gene_x_coordinates[i]
-vertical_annotation_line_y_coordinate_start<-gene_y_coordinates[i]
-vertical_annotation_line_y_coordinate_stop<-y_axis_stop_gene_annotation_vertical_lines
+    for (i in 1:length(gene_x_coordinates))
+    {
 
-## Define the diagonal for the vertical annotation lines
-diagonal_annotation_line_x_coordinate_start<-gene_x_coordinates[i]
-diagonal_annotation_line_x_coordinate_stop<-((x_axis_limit/length(gene_x_coordinates))/2)+((i-1)*(x_axis_limit/length(gene_x_coordinates)))
-diagonal_annotation_line_y_coordinate_start<-y_axis_stop_gene_annotation_vertical_lines
-diagonal_annotation_line_y_coordinate_stop<-y_axis_stop_gene_annotation_diagonal_lines
+    ## Define the coordinates for the vertical annotation lines
+    vertical_annotation_line_x_coordinate_start<-gene_x_coordinates[i]
+    vertical_annotation_line_x_coordinate_stop<-gene_x_coordinates[i]
+    vertical_annotation_line_y_coordinate_start<-gene_y_coordinates[i]
+    vertical_annotation_line_y_coordinate_stop<-y_axis_stop_gene_annotation_vertical_lines
 
-## Draw the vertical annotation lines
-lines(c(vertical_annotation_line_x_coordinate_start,vertical_annotation_line_x_coordinate_stop),c(vertical_annotation_line_y_coordinate_start,vertical_annotation_line_y_coordinate_stop),col="grey", lty=2,lwd=1)
+    ## Define the diagonal for the vertical annotation lines
+    diagonal_annotation_line_x_coordinate_start<-gene_x_coordinates[i]
+    diagonal_annotation_line_x_coordinate_stop<-((x_axis_limit/length(gene_x_coordinates))/2)+((i-1)*(x_axis_limit/length(gene_x_coordinates)))
+    diagonal_annotation_line_y_coordinate_start<-y_axis_stop_gene_annotation_vertical_lines
+    diagonal_annotation_line_y_coordinate_stop<-y_axis_stop_gene_annotation_diagonal_lines
 
-## Draw the diagonal annotation lines
-lines(c(diagonal_annotation_line_x_coordinate_start,diagonal_annotation_line_x_coordinate_stop),c(diagonal_annotation_line_y_coordinate_start,diagonal_annotation_line_y_coordinate_stop),col="grey", lty=2,lwd=1)
+    ## Draw the vertical annotation lines
+    lines(c(vertical_annotation_line_x_coordinate_start,vertical_annotation_line_x_coordinate_stop),c(vertical_annotation_line_y_coordinate_start,vertical_annotation_line_y_coordinate_stop),col="grey", lty=2,lwd=1)
 
-## Plot the gene names for each top SNP
-# calculating font sizes 
-number_of_annotations_to_plot<-dim(gene_plot_data)[1]
-maximum_characters_annotation<-max(nchar(gene_plot_data$nearest_gene_name),na.rm=TRUE)
+    ## Draw the diagonal annotation lines
+    lines(c(diagonal_annotation_line_x_coordinate_start,diagonal_annotation_line_x_coordinate_stop),c(diagonal_annotation_line_y_coordinate_start,diagonal_annotation_line_y_coordinate_stop),col="grey", lty=2,lwd=1)
 
-if (( number_of_annotations_to_plot <= 70) & (maximum_characters_annotation <=9)) {
-   
-   gene_label_cex_size<-1
+    ## Plot the gene names for each top SNP
+    # calculating font sizes 
+    number_of_annotations_to_plot<-dim(gene_plot_data)[1]
+    maximum_characters_annotation<-max(nchar(gene_plot_data$nearest_gene_name),na.rm=TRUE)
 
-} else if (( number_of_annotations_to_plot > 70) & (maximum_characters_annotation <=9)) {
-   
-   gene_label_cex_size<-1.30-(0.006*number_of_annotations_to_plot)
+    if (( number_of_annotations_to_plot <= 70) & (maximum_characters_annotation <=9)) {
+       
+       gene_label_cex_size<-1
 
-} else if (( number_of_annotations_to_plot <= 70) & (maximum_characters_annotation >9)) {
-   
-   gene_label_cex_size<-1.15-(0.03264*maximum_characters_annotation)
+    } else if (( number_of_annotations_to_plot > 70) & (maximum_characters_annotation <=9)) {
+       
+       gene_label_cex_size<-1.30-(0.006*number_of_annotations_to_plot)
 
-} else (( number_of_annotations_to_plot > 70) & (maximum_characters_annotation >9))
+    } else if (( number_of_annotations_to_plot <= 70) & (maximum_characters_annotation >9)) {
+       
+       gene_label_cex_size<-1.15-(0.03264*maximum_characters_annotation)
 
-   gene_label_cex_size_n_genes_annotation<-1.30-(0.006*number_of_annotations_to_plot)
-   gene_label_cex_size_max_char_annotation<-1.15-(0.03264*maximum_characters_annotation)
-   gene_label_cex_size<-ifelse(gene_label_cex_size_n_genes_annotation<gene_label_cex_size_max_char_annotation,
-                               gene_label_cex_size_n_genes_annotation,gene_label_cex_size_max_char_annotation)
+    } else (( number_of_annotations_to_plot > 70) & (maximum_characters_annotation >9))
 
-# Plot the labels
-text(diagonal_annotation_line_x_coordinate_stop,diagonal_annotation_line_y_coordinate_stop,labels=nearest_gene_names_hits[i],cex=gene_label_cex_size,srt=90,adj = c(0,0.5),font=3,ps=12)
+       gene_label_cex_size_n_genes_annotation<-1.30-(0.006*number_of_annotations_to_plot)
+       gene_label_cex_size_max_char_annotation<-1.15-(0.03264*maximum_characters_annotation)
+       gene_label_cex_size<-ifelse(gene_label_cex_size_n_genes_annotation<gene_label_cex_size_max_char_annotation,
+                                   gene_label_cex_size_n_genes_annotation,gene_label_cex_size_max_char_annotation)
+
+    # Plot the labels
+    text(diagonal_annotation_line_x_coordinate_stop,diagonal_annotation_line_y_coordinate_stop,labels=nearest_gene_names_hits[i],cex=gene_label_cex_size,srt=90,adj = c(0,0.5),font=3,ps=12)
+    }
 }
 
 ## Draw the significanc threshold
